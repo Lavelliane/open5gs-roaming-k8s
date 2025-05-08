@@ -1,0 +1,29 @@
+customOpen5gsConfig:
+  global:
+    max:
+      ue: 1024
+  sepp:
+    sbi:
+      server:
+        - address: 0.0.0.0
+          port: 7777
+      client:
+        nrf:
+          - uri: http://visited-open5gs-nrf-sbi.visited-network.svc.cluster.local:7777
+    n32:
+      server:
+        - sender: visited-sepp.visited-network.svc.cluster.local
+          scheme: http
+          address: 0.0.0.0
+          port: 7443
+      n32f:
+        scheme: http
+        address: 0.0.0.0
+      client:
+        sepp:
+          - receiver: home-sepp.home-network.svc.cluster.local
+            uri: http://192.168.58.2:31704
+            plmn_id:
+              mcc: "999"
+              mnc: "70"
+    default: {} 

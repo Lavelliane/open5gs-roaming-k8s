@@ -1,0 +1,27 @@
+config:
+  amf:
+    # Point to the Visited AMF service
+    hostname: visited-open5gs-amf-ngap.visited-network.svc.cluster.local
+  gnb:
+    mcc: "001"  # Visited Network MCC
+    mnc: "01"   # Visited Network MNC
+    tac: "000001" # Example TAC for visited network - padded to 3 bytes hex
+    gnbid: "000008" # Add default gNB ID
+    sst: "1"       # Add SST matching UE
+    sd: "ffffff"  # Add SD matching UE
+    # Keep other gNB settings default or adjust as needed
+  ue:
+    # Keep defaults as they match the home subscriber
+    msin: "0000000001"
+    key: "465B5CE8B199B49FAA5F0A2EE238A6BC"
+    opc: "E8ED289DEBA952E4283B54E88E6183CA"
+    dnn: "internet"
+    hplmn:
+      mcc: "999"
+      mnc: "70"
+    sst: "1"
+    sd: "ffffff"
+
+# Ensure privileged mode if needed for network interfaces
+# securityContext:
+#   privileged: true 
