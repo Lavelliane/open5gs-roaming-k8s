@@ -1,8 +1,7 @@
-# add-subscriber-job.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: add-home-subscriber
+  name: delete-old-subscriber
   namespace: home-network
 spec:
   template:
@@ -10,9 +9,9 @@ spec:
       containers:
       - name: dbctl
         image: docker.io/gradiant/open5gs-dbctl:0.10.3
-        command: ["open5gs-dbctl", "add_ue_with_slice", "001011234567891", "7F176C500D47CF2090CB6D91F4A73479", "3D45770E83C7BBB6900F3653FDA6330F", "internet", "1", "000001"]
+        command: ["open5gs-dbctl", "remove", "999700000000001"]
         env:
         - name: DB_URI
           value: "mongodb://home-open5gs-mongodb/open5gs"
       restartPolicy: Never
-  backoffLimit: 4
+  backoffLimit: 1 

@@ -22,8 +22,8 @@ customOpen5gsConfig:
       client:
         sepp:
           - receiver: visited-sepp.visited-network.svc.cluster.local
-            uri: http://192.168.58.2:30526
+            uri: http://VISITED_SEPP_PLACEHOLDER
             plmn_id:
               mcc: "001"
               mnc: "01"
-    default: {} 
+    default: {}
