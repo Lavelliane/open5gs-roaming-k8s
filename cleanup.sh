@@ -4,6 +4,39 @@
 
 echo "Starting cleanup of Open5GS Roaming deployment..."
 
+# --- Color definitions (optional, for better output) ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+log_info() {
+  echo -e "${GREEN}$1${NC}"
+}
+
+log_warning() {
+  echo -e "${YELLOW}$1${NC}"
+}
+
+log_error() {
+  echo -e "${RED}$1${NC}"
+}
+
+# --- Check for Minikube Tunnel ---
+log_info "Checking if minikube tunnel is running..."
+if ! pgrep -f "minikube tunnel" > /dev/null; then
+    log_error "minikube tunnel is not running!"
+    log_warning "This script requires 'minikube tunnel' to be active to correctly connect to the Kubernetes cluster and delete resources."
+    read -p "Please run 'minikube tunnel' in a separate terminal and then press [Enter] to continue, or Ctrl+C to abort cleanup."
+    # Re-check after user prompt
+    if ! pgrep -f "minikube tunnel" > /dev/null; then
+        log_error "minikube tunnel is still not detected. Aborting cleanup to prevent partial resource deletion."
+        exit 1
+    fi
+    log_info "Minikube tunnel detected. Proceeding with cleanup..."
+fi
+echo ""
+
 # --- Configuration (Namespaces and Helm Release Names) ---
 # Ensure these match the names used in your deploy_roaming.sh script
 HOME_NAMESPACE="home-network"

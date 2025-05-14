@@ -234,8 +234,8 @@ This document summarizes the steps taken to deploy a 5G roaming scenario using O
 
 7.  **Initial SEPP Deployment (Local Chart):**
     ```bash
-    helm install home-sepp ./charts/open5gs-sepp -f home-sepp-values.yaml --namespace home-network
-    helm install visited-sepp ./charts/open5gs-sepp -f visited-sepp-values.yaml --namespace visited-network
+    helm uninstall home-sepp -n home-network && helm install home-sepp ./charts/open5gs-sepp -f home-sepp-values.yaml --namespace home-network && \
+    helm uninstall visited-sepp -n visited-network && helm install visited-sepp ./charts/open5gs-sepp -f visited-sepp-values.yaml --namespace visited-network
     ```
     *(Note: This deployment failed due to various configuration errors fixed iteratively)*
 

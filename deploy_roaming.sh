@@ -148,23 +148,20 @@ customOpen5gsConfig:
           - uri: http://home-open5gs-nfs-nrf-sbi.home-network.svc.cluster.local:7777
     n32:
       server:
-        - sender: home-sepp.home-network.svc.cluster.local
+        - sender: home-sepp
           scheme: http
           address: 0.0.0.0
           port: 7443
-      n32f:
-        scheme: http
-        address: 0.0.0.0
       client:
         sepp:
-          - receiver: visited-sepp.visited-network.svc.cluster.local
-            uri: http://VISITED_SEPP_PLACEHOLDER
+          - receiver: visited-sepp
+            uri: http://visited-sepp-open5gs-sepp-n32.visited-network.svc.cluster.local:7443
             plmn_id:
-              mcc: "001"
-              mnc: "01"
+              mcc: "999"
+              mnc: "70"
     default: {}
 EOF
-log_info "Created home-sepp-values.yaml with placeholder URIs"
+log_info "Created home-sepp-values.yaml with direct Kubernetes service reference"
 }
 
 # Function to create visited-sepp-values.yaml
@@ -184,23 +181,20 @@ customOpen5gsConfig:
           - uri: http://visited-open5gs-nrf-sbi.visited-network.svc.cluster.local:7777
     n32:
       server:
-        - sender: visited-sepp.visited-network.svc.cluster.local
+        - sender: visited-sepp
           scheme: http
           address: 0.0.0.0
           port: 7443
-      n32f:
-        scheme: http
-        address: 0.0.0.0
       client:
         sepp:
-          - receiver: home-sepp.home-network.svc.cluster.local
-            uri: http://HOME_SEPP_PLACEHOLDER
+          - receiver: home-sepp
+            uri: http://home-sepp-open5gs-sepp-n32.home-network.svc.cluster.local:7443
             plmn_id:
-              mcc: "999"
-              mnc: "70"
+              mcc: "001"
+              mnc: "01"
     default: {}
 EOF
-log_info "Created visited-sepp-values.yaml with placeholder URIs"
+log_info "Created visited-sepp-values.yaml with direct Kubernetes service reference"
 }
 
 # Function to create packetrusher-values.yaml
@@ -407,82 +401,76 @@ echo ""
 # 4.2 Initial SEPP Deployment (using local charts)
 log_subheader "4.2 Initial SEPP Deployment"
 log_info "Ensure your local charts are in: $LOCAL_CHARTS_PATH"
+
+# Check if minikube tunnel is running
+log_info "Checking if minikube tunnel is running..."
+if ! pgrep -f "minikube tunnel" > /dev/null; then
+    log_error "minikube tunnel is not running!"
+    log_info "Please run 'minikube tunnel' in a separate terminal and press Enter to continue..."
+    read -p "Press Enter once minikube tunnel is running..."
+fi
+
+# Deploy SEPPs with ClusterIP services
 helm uninstall home-sepp -n home-network 2>/dev/null || true
 helm install home-sepp ${LOCAL_CHARTS_PATH}/open5gs-sepp -f home-sepp-values.yaml --namespace home-network \
-  --set containerPorts.sbi=80 \
-  --set services.sbi.ports.sbi=80 \
-  --set containerPorts.n32=80 \
-  --set services.n32.ports.n32=80
+  --set containerPorts.sbi=7777 \
+  --set services.sbi.type=ClusterIP \
+  --set services.sbi.ports.sbi=7777 \
+  --set containerPorts.n32=7443 \
+  --set services.n32.type=ClusterIP \
+  --set services.n32.ports.n32=7443
 
 helm uninstall visited-sepp -n visited-network 2>/dev/null || true
 helm install visited-sepp ${LOCAL_CHARTS_PATH}/open5gs-sepp -f visited-sepp-values.yaml --namespace visited-network \
-  --set containerPorts.sbi=80 \
-  --set services.sbi.ports.sbi=80 \
-  --set containerPorts.n32=80 \
-  --set services.n32.ports.n32=80
+  --set containerPorts.sbi=7777 \
+  --set services.sbi.type=ClusterIP \
+  --set services.sbi.ports.sbi=7777 \
+  --set containerPorts.n32=7443 \
+  --set services.n32.type=ClusterIP \
+  --set services.n32.ports.n32=7443
+
 log_info "Initial SEPP deployment completed."
 log_info "Waiting for SEPPs to be ready..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=home-sepp -n home-network --timeout=180s
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=visited-sepp -n visited-network --timeout=180s
 echo ""
 
-# 4.3 Expose SEPP N32 Interfaces
-log_subheader "4.3 Expose SEPP N32 Interfaces"
-log_info "Patching SEPP services to type: LoadBalancer."
-log_info "IMPORTANT: Ensure 'minikube tunnel' is running in a separate terminal if using Minikube!"
-kubectl patch service home-sepp-open5gs-sepp-n32 -n home-network -p '{"spec": {"type": "LoadBalancer"}}'
-kubectl patch service visited-sepp-open5gs-sepp-n32 -n visited-network -p '{"spec": {"type": "LoadBalancer"}}'
-log_info "Patched SEPP services. Waiting for external IP/NodePort assignment..."
-log_info "This might take some time. If it hangs, ensure 'minikube tunnel' is active and services are exposing correctly."
+# No need to update SEPP configurations as we're using direct kubernetes service references
+log_subheader "4.3 Skip N32 UpdateConfiguration"
+log_info "Using direct Kubernetes service references for SEPP connectivity"
+log_info "Home SEPP N32: home-sepp-open5gs-sepp-n32.home-network.svc.cluster.local:7443"
+log_info "Visited SEPP N32: visited-sepp-open5gs-sepp-n32.visited-network.svc.cluster.local:7443"
 
-# Dynamically fetch NodePorts
-HOME_SEPP_N32_NODEPORT_FETCHED=$(get_node_port "home-network" "home-sepp-open5gs-sepp-n32")
-if [ $? -ne 0 ]; then
-    read -p "Enter Home SEPP N32 NodePort manually or press Ctrl+C to abort: " HOME_SEPP_N32_NODEPORT_FETCHED
-    if [ -z "$HOME_SEPP_N32_NODEPORT_FETCHED" ]; then log_error "Home SEPP NodePort not provided. Exiting."; exit 1; fi
-fi
-HOME_SEPP_N32_NODEPORT="$HOME_SEPP_N32_NODEPORT_FETCHED"
+# Skip the reinstallation section as we don't need to update URIs
+log_info "No need to reinstall SEPPs as we're using direct Kubernetes service references"
 
-VISITED_SEPP_N32_NODEPORT_FETCHED=$(get_node_port "visited-network" "visited-sepp-open5gs-sepp-n32")
-if [ $? -ne 0 ]; then
-    read -p "Enter Visited SEPP N32 NodePort manually or press Ctrl+C to abort: " VISITED_SEPP_N32_NODEPORT_FETCHED
-    if [ -z "$VISITED_SEPP_N32_NODEPORT_FETCHED" ]; then log_error "Visited SEPP NodePort not provided. Exiting."; exit 1; fi
-fi
-VISITED_SEPP_N32_NODEPORT="$VISITED_SEPP_N32_NODEPORT_FETCHED"
+# Directly verify SEPP connectivity
+log_subheader "4.4 Verify SEPP Connectivity"
 
-echo ""
-log_info "--- Verification ---"
-log_info "Minikube IP (if fetched for other purposes): $MINIKUBE_IP"
-log_info "Using Home SEPP N32 NodePort: $HOME_SEPP_N32_NODEPORT"
-log_info "Using Visited SEPP N32 NodePort: $VISITED_SEPP_N32_NODEPORT"
-log_info "SEPP communication will use Minikube IP and NodePorts with ports 7777 for SBI and 7443 for N32."
-log_info "--------------------"
-read -p "Press [Enter] to continue with these SEPP configurations, or Ctrl+C to abort."
-echo ""
+# Wait a moment for the services to be fully established
+log_info "Waiting for SEPP services to stabilize..."
+sleep 10
 
-# 4.4 Reconfigure SEPPs for External Communication
-log_subheader "4.4 Reconfigure SEPPs with External URIs"
-update_home_sepp_values_yaml
-update_visited_sepp_values_yaml
+# Delete the pods to force a restart with the new configuration
+log_info "Restarting SEPP pods to ensure clean configuration..."
+kubectl delete pods -l app.kubernetes.io/instance=home-sepp -n home-network
+kubectl delete pods -l app.kubernetes.io/instance=visited-sepp -n visited-network
 
-helm uninstall home-sepp -n home-network 2>/dev/null || true # Ensure uninstall happens before install
-helm install home-sepp ${LOCAL_CHARTS_PATH}/open5gs-sepp -f home-sepp-values.yaml --namespace home-network \
-  --set containerPorts.sbi=7777 \
-  --set services.sbi.ports.sbi=7777 \
-  --set containerPorts.n32=7443 \
-  --set services.n32.ports.n32=7443
-
-helm uninstall visited-sepp -n visited-network 2>/dev/null || true # Ensure uninstall happens
-helm install visited-sepp ${LOCAL_CHARTS_PATH}/open5gs-sepp -f visited-sepp-values.yaml --namespace visited-network \
-  --set containerPorts.sbi=7777 \
-  --set services.sbi.ports.sbi=7777 \
-  --set containerPorts.n32=7443 \
-  --set services.n32.ports.n32=7443
-log_info "Reinstalled SEPPs with updated values files for external communication."
-log_info "Waiting for SEPPs to be ready after reconfiguration..."
+# Wait for the pods to be ready again
+log_info "Waiting for SEPP pods to restart..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=home-sepp -n home-network --timeout=180s
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=visited-sepp -n visited-network --timeout=180s
-echo ""
+
+# Wait a bit longer for the SEPP connection to establish
+log_info "Waiting for SEPP N32 connections to establish..."
+sleep 20
+
+# Check the logs
+log_info "Checking SEPP logs for connection status:"
+log_info "Home SEPP logs:"
+kubectl logs -l app.kubernetes.io/instance=home-sepp -n home-network --tail=50
+log_info "Visited SEPP logs:"
+kubectl logs -l app.kubernetes.io/instance=visited-sepp -n visited-network --tail=50
 
 # --- 5. Deploy PacketRusher ---
 log_header "5. Deploy PacketRusher"

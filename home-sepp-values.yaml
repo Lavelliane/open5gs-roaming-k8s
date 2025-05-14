@@ -12,18 +12,15 @@ customOpen5gsConfig:
           - uri: http://home-open5gs-nfs-nrf-sbi.home-network.svc.cluster.local:7777
     n32:
       server:
-        - sender: home-sepp.home-network.svc.cluster.local
+        - sender: home-sepp
           scheme: http
           address: 0.0.0.0
           port: 7443
-      n32f:
-        scheme: http
-        address: 0.0.0.0
       client:
         sepp:
-          - receiver: visited-sepp.visited-network.svc.cluster.local
-            uri: http://VISITED_SEPP_PLACEHOLDER
+          - receiver: visited-sepp
+            uri: http://visited-sepp-open5gs-sepp-n32.visited-network.svc.cluster.local:7443
             plmn_id:
-              mcc: "001"
-              mnc: "01"
+              mcc: "999"
+              mnc: "70"
     default: {}

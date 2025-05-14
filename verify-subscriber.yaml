@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-subscriber
+  namespace: home-network
+spec:
+  template:
+    spec:
+      containers:
+      - name: dbctl
+        image: docker.io/gradiant/open5gs-dbctl:0.10.3
+        command: ["open5gs-dbctl", "show"]
+        env:
+        - name: DB_URI
+          value: "mongodb://home-open5gs-mongodb/open5gs"
+      restartPolicy: Never
+  backoffLimit: 4
